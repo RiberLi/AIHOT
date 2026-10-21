@@ -12,6 +12,7 @@ import {
   type ReceiptRequest,
 } from "./receipts.ts";
 import { enterModelCircuit, recordModelHealth, type CircuitPermit } from "./circuit.ts";
+import { agentChatJson } from "./agent-bridge.ts";
 
 export interface ModelSpec extends ModelPreset {
   key: string;
@@ -145,6 +146,9 @@ const FAILOVER_TIMEOUT_MS = 30_000;
  * followed by a second paid request.
  */
 export async function chatJson<S extends z.ZodType>(opts: ChatJsonOptions<S>): Promise<ChatJsonResult<z.infer<S>>> {
+  // Same prompt, same Zod contract and downstream business rules: only the model
+  // transport is replaced by a durable Skill/Agent handoff.
+  if (process.env.AGENT_REVIEW_ENABLED === "true") return agentChatJson(opts);
   if (!opts.fallbackModel) return chatOnce(opts);
   const backupOpts = { ...opts, model: opts.fallbackModel };
   const fallbackFor = logicalKeyFor(requestFor(opts, MODELS[opts.model]!).request);

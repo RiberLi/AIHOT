@@ -13,7 +13,7 @@ import { addDays, beijingAt, beijingDate, beijingTime, isoWeekLabel, isoWeekRang
 import { sql } from "../db.ts";
 import { logError } from "../lib/log-error.ts";
 import { chatJson } from "../providers/llm.ts";
-import { completeReceipt } from "../providers/receipts.ts";
+import { completeReceipt, failureKind } from "../providers/receipts.ts";
 import { shutdownSignal } from "../jobs/queue.ts";
 import { emit } from "../modules.ts";
 import { arrangeDaily, candidates, dailyEdition, periodEntries, sectionOf, SECTION_ORDER, type Candidate, type EditionEntry } from "./edition.ts";
@@ -226,6 +226,9 @@ async function composePeriod(kind: "weekly" | "monthly", key: string, startDate:
     receiptId = res.receiptId;
   } catch (error) {
     if (shutdownSignal.signal.aborted) throw error;
+    // An outstanding human/Agent answer is NOT a failed model response: never
+    // publish a degraded weekly/monthly report before the real text arrives.
+    if (process.env.AGENT_REVIEW_ENABLED === "true" && failureKind(error) === "busy") throw error;
     console.error(JSON.stringify({ level: "warn", msg: "period writer failed; the issue goes out with its plain overview", report: `${kind}:${key}`, error: logError(error) }));
   }
   const usable = (text: string | undefined, max: number) => {

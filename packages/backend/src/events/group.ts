@@ -255,7 +255,7 @@ export async function groupArticle(articleId: string, opts: GroupOptions = {}): 
     // committed before an optional downstream operation failed. Shutdown, budget waits and an unbilled
     // provider outage (every route rejected the request as retryable) leave work pending for the repair sweep.
     const kind = failureKind(error);
-    const waiting = shutdownSignal.signal.aborted || kind === "budget" || kind === "outage";
+    const waiting = shutdownSignal.signal.aborted || kind === "budget" || kind === "outage" || kind === "busy";
     await sql`UPDATE articles SET grouping_status = ${waiting ? 'pending' : 'failed'},
       grouped_at = NULL, grouping_receipt_id = ${failedReceiptId(error)}, grouping_error = ${String(error).slice(0, 2000)}
       WHERE id = ${articleId} AND revision = ${revision} AND grouping_status <> 'complete' AND ${!(error instanceof GroupingSupersededError)}`;
