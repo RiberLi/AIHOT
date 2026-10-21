@@ -381,7 +381,10 @@ export async function translatePending(opts: { limit?: number; budgetMs?: number
       if (shutdownSignal.signal.aborted || endsRun(error)) return { done, quotes: 0 };
       // A request that may have been billed waits for its release (operations/recover.ts), which lets
       // the item's next attempt call again; meanwhile the other items go on.
-      if (failureKind(error) === "unknown") continue;
+      // Skill mode has not answered this model request yet. It is NOT a failed
+      // translation attempt and must remain eligible after the AI chunk merges.
+      if (failureKind(error) === "unknown" ||
+          (process.env.AGENT_REVIEW_ENABLED === "true" && failureKind(error) === "busy")) continue;
       const message = (error as Error).message;
       done.push({ articleId: r.article_id, status: "skipped", reason: message.slice(0, 200) });
       outcome = "failed";

@@ -7,9 +7,16 @@ import { paidRequest, ReceiptBusyError } from "./receipts.ts";
 import type { ChatJsonOptions, ChatJsonResult } from "./llm.ts";
 
 export function agentTaskId(input: Pick<ChatJsonOptions<z.ZodType>, "model" | "purpose" | "subject" | "promptVersion" | "system" | "user" | "attemptTag" | "temperature" | "maxTokens" | "json">): string {
+  // Media discovery can add/remove a non-semantic image-count line without
+  // bumping the article revision. Text-only Agent prompts must not demand a
+  // second answer just because the image count changed. Keep actual image
+  // ContentPart[] untouched: pixels can materially change the judgement.
+  const user = typeof input.user === "string"
+    ? input.user.replace(/【媒体】\d+ 张图(?:\\n|\r?\n)/g, "")
+    : input.user;
   return sha256(stableJson({
     purpose: input.purpose, subject: input.subject, promptVersion: input.promptVersion,
-    model: input.model, system: input.system, user: input.user, attemptTag: input.attemptTag ?? null,
+    model: input.model, system: input.system, user, attemptTag: input.attemptTag ?? null,
     temperature: input.temperature ?? null, maxTokens: input.maxTokens ?? null, json: input.json ?? null,
   }));
 }

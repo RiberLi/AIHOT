@@ -63,7 +63,9 @@ const ENGINE_SCHEDULES: Scheduled[] = [
 ];
 
 export async function registerSchedules(boss: PgBoss) {
-  const schedules = [...ENGINE_SCHEDULES, ...serverModules().flatMap((m) => m.schedules ?? [])].filter((s) => s.when?.() ?? true);
+  const collectionOnly = process.env.AGENT_REVIEW_ENABLED === "true";
+  const schedules = [...ENGINE_SCHEDULES, ...serverModules().flatMap((m) => m.schedules ?? [])]
+    .filter((s) => (!collectionOnly || s.name.startsWith("sources.")) && (s.when?.() ?? true));
   for (const s of schedules) {
     const queue = `cron.${s.name}`;
     await ensureQueue(queue, { policy: "singleton", retryLimit: 1, expireInSeconds: 3600 });

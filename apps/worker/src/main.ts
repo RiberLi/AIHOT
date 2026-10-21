@@ -19,12 +19,17 @@ assertProductionSecrets([["auth", "IMG_PROXY_SIGN_SECRET"]]);
 
 await ensureContentTargets();
 const boss = await getBoss();
-await registerContentJobs(boss);
+// Agent mode: the Worker collects only. The current AI session invokes all
+// downstream business stages directly through scripts/agent-workflow.ts.
+const collectionOnly = process.env.AGENT_REVIEW_ENABLED === "true";
+if (!collectionOnly) await registerContentJobs(boss);
 if (process.env.COLLECT_ENABLED === "true") await registerSourceJobs(boss);
-await registerEventJobs(boss);
-await registerNotifyJobs(boss);
-await registerPublicationJobs(boss);
-await workModuleQueues(boss);
+if (!collectionOnly) {
+  await registerEventJobs(boss);
+  await registerNotifyJobs(boss);
+  await registerPublicationJobs(boss);
+  await workModuleQueues(boss);
+}
 await registerSchedules(boss);
 const heartbeat = startHeartbeat("worker");
 console.log(JSON.stringify({ level: "info", msg: "worker started", pid: process.pid }));

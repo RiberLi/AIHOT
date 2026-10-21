@@ -70,6 +70,7 @@ export function groupingPriority(a: { signal: boolean; historical: boolean }): n
  * Posts of non-editorial sources skip the analysis queue: they only need recording and grouping.
  */
 export async function queueProcessing(articleId: string, opts: { step?: Step; attemptTag?: string; db?: Db } = {}): Promise<string | null> {
+  if (process.env.AGENT_REVIEW_ENABLED === "true") return null;
   const db = opts.db ?? sql;
   const r = await route(articleId, db);
   if (!r) return null;

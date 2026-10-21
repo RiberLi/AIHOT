@@ -130,6 +130,9 @@ function queueDb(tx: Db) {
 
 /** Enqueues a job. With `tx`, the job commits atomically with the caller's business write. */
 export async function enqueue<Q extends QueueName>(name: Q, data: JobData[Q], options: SendOptions = {}, tx?: Db): Promise<string | null> {
+  // In Agent mode no content, grouping or publication jobs are delegated to the
+  // Worker. The Skill calls these stages directly after each AI chunk.
+  if (process.env.AGENT_REVIEW_ENABLED === "true" && !name.startsWith("sources.")) return null;
   await ensureQueue(name);
   const b = await getBoss();
   return b.send(name, data, tx ? { ...options, db: queueDb(tx) } : options);
@@ -137,6 +140,7 @@ export async function enqueue<Q extends QueueName>(name: Q, data: JobData[Q], op
 
 /** Enqueues a job on a module's queue. With `tx`, the job commits atomically with the caller's business write. */
 export async function enqueueOn<T extends object>(queue: ModuleQueue<T>, data: T, options: SendOptions = {}, tx?: Db): Promise<string | null> {
+  if (process.env.AGENT_REVIEW_ENABLED === "true") return null;
   await ensureQueue(queue.name, queue.options);
   const b = await getBoss();
   return b.send(queue.name, data, tx ? { ...options, db: queueDb(tx) } : options);
